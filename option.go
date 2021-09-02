@@ -9,8 +9,8 @@ const (
 	DefaultMaxWait = 1 * time.Second
 )
 
-// Option defines type for Options setter function.
-type Option func(*Options)
+// OptionFunc defines type for Options setter function.
+type OptionFunc func(*Options)
 
 // Options sets configuration options for the go-batch instance.
 type Options struct {
@@ -25,14 +25,14 @@ type Options struct {
 }
 
 // WithSize sets the maximum number of items that can be in each batch.
-func WithSize(size int) Option {
+func WithSize(size int) OptionFunc {
 	return func(opts *Options) {
 		opts.Size = size
 	}
 }
 
 // WithMaxWait sets the maximum waiting time for filling each batch.
-func WithMaxWait(maxWait time.Duration) Option {
+func WithMaxWait(maxWait time.Duration) OptionFunc {
 	return func(opts *Options) {
 		opts.MaxWait = maxWait
 	}
