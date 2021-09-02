@@ -6,14 +6,12 @@ import (
 
 // Batch represents the go-batch struct.
 type Batch struct {
-	opts   *Options
-	buffer []interface{}
-	close  chan struct{}
+	opts  *Options
+	close chan struct{}
 
-	input  chan interface{}
-	output chan []interface{}
-
-	Input  chan<- interface{}
+	// Input represents the batch input channel.
+	Input chan<- interface{}
+	// Output represents the batch output channel.
 	Output <-chan []interface{}
 }
 
@@ -32,48 +30,43 @@ func New(optionFuncs ...OptionFunc) *Batch {
 	output := make(chan []interface{})
 
 	b := &Batch{
-		opts:   opts,
-		buffer: []interface{}{},
-		close:  make(chan struct{}),
-
-		input:  input,
-		output: output,
+		opts:  opts,
+		close: make(chan struct{}),
 
 		Input:  input,
 		Output: output,
 	}
 
-	go b.processor()
+	go b.processor(input, output)
 
 	return b
 }
 
-func (b *Batch) processor() {
+func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
+	buffer := make([]interface{}, 0)
 	ticker := time.NewTicker(b.opts.MaxWait)
 
 	for {
 		select {
-		case event := <-b.input:
-			b.buffer = append(b.buffer, event)
+		case event := <-input:
+			buffer = append(buffer, event)
 
-			if len(b.buffer) == b.opts.Size {
-				b.output <- b.buffer
+			if len(buffer) == b.opts.Size {
+				output <- buffer
 
-				b.buffer = []interface{}{}
+				buffer = make([]interface{}, 0)
 
 				ticker.Reset(b.opts.MaxWait)
 			}
 		case <-ticker.C:
-			if len(b.buffer) > 0 {
-				b.output <- b.buffer
+			if len(buffer) > 0 {
+				output <- buffer
 
-				b.buffer = []interface{}{}
+				buffer = make([]interface{}, 0)
 			}
 		case <-b.close:
-			if len(b.buffer) > 0 {
-				b.output <- b.buffer
-
-				b.buffer = []interface{}{}
+			if len(buffer) > 0 {
+				output <- buffer
 			}
 
 			return
