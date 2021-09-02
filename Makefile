@@ -13,6 +13,9 @@ lint:
 test:
 	@go test -v -race -p 1 ./...
 
+bench:
+	@go test -bench=.
+
 ci-test:
 	@go test -v -race -p 1 -coverprofile=coverage.txt -covermode=atomic ./...
 	@go tool cover -func coverage.txt
