@@ -22,13 +22,13 @@ func main() {
 		}
 	}()
 
-	for i := 1; i <= 1000; i++ {
+	for i := 1; i <= 100; i++ {
 		batch.Input <- i
 	}
 
-	log.Println("====================")
+	time.Sleep(1 * time.Second)
 
-	for i := 1; i <= 1000; i++ {
+	for i := 1; i <= 100; i++ {
 		batch.Input <- i
 
 		if rand.Intn(2) == 0 {
@@ -36,5 +36,5 @@ func main() {
 		}
 	}
 
-	time.Sleep(10 * time.Second)
+	batch.Close()
 }

@@ -1,17 +1,14 @@
 package batch
 
 import (
-	"sync"
 	"time"
 )
 
 // Batch represents the go-batch struct.
 type Batch struct {
-	mutex sync.Mutex
-
-	opts       *Options
-	buffer     []interface{}
-	dropSignal chan struct{}
+	opts   *Options
+	buffer []interface{}
+	close  chan struct{}
 
 	input  chan interface{}
 	output chan []interface{}
@@ -31,14 +28,13 @@ func New(optionFuncs ...OptionFunc) *Batch {
 		optionFunc(opts)
 	}
 
-	dropSignal := make(chan struct{})
 	input := make(chan interface{})
 	output := make(chan []interface{})
 
 	b := &Batch{
-		opts:       opts,
-		buffer:     []interface{}{},
-		dropSignal: dropSignal,
+		opts:   opts,
+		buffer: []interface{}{},
+		close:  make(chan struct{}),
 
 		input:  input,
 		output: output,
@@ -47,54 +43,45 @@ func New(optionFuncs ...OptionFunc) *Batch {
 		Output: output,
 	}
 
-	go b.maxWaitHandler()
-	go b.batchSizeHandler()
+	go b.processor()
 
 	return b
 }
 
-func (b *Batch) maxWaitHandler() {
+func (b *Batch) processor() {
+	ticker := time.NewTicker(b.opts.MaxWait)
+
 	for {
 		select {
-		case <-time.NewTicker(b.opts.MaxWait).C:
-		case <-b.dropSignal:
-			continue
+		case event := <-b.input:
+			b.buffer = append(b.buffer, event)
+
+			if len(b.buffer) == b.opts.Size {
+				b.output <- b.buffer
+
+				b.buffer = []interface{}{}
+
+				ticker.Reset(b.opts.MaxWait)
+			}
+		case <-ticker.C:
+			if len(b.buffer) > 0 {
+				b.output <- b.buffer
+
+				b.buffer = []interface{}{}
+			}
+		case <-b.close:
+			if len(b.buffer) > 0 {
+				b.output <- b.buffer
+
+				b.buffer = []interface{}{}
+			}
+
+			return
 		}
-
-		b.mutex.Lock()
-
-		if len(b.buffer) > 0 {
-			b.output <- b.buffer
-
-			b.buffer = []interface{}{}
-		}
-
-		b.mutex.Unlock()
 	}
 }
 
-func (b *Batch) batchSizeHandler() {
-	for {
-		event := <-b.input
-
-		drop := false
-
-		b.mutex.Lock()
-
-		b.buffer = append(b.buffer, event)
-
-		if len(b.buffer) == b.opts.Size {
-			b.output <- b.buffer
-
-			b.buffer = []interface{}{}
-
-			drop = true
-		}
-
-		b.mutex.Unlock()
-
-		if drop {
-			b.dropSignal <- struct{}{}
-		}
-	}
+// Close drops all the batch events into the output channel and does not listen to the new events again.
+func (b *Batch) Close() {
+	b.close <- struct{}{}
 }
