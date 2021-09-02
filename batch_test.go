@@ -51,6 +51,25 @@ func TestBatchMaxWait(t *testing.T) {
 	}
 }
 
+func TestBatchClose(t *testing.T) {
+	batch := goBatch.New(
+		goBatch.WithSize(100),
+		goBatch.WithMaxWait(100*time.Second),
+	)
+
+	for i := 1; i <= 10; i++ {
+		batch.Input <- i
+	}
+
+	batch.Close()
+
+	output := <-batch.Output
+
+	if len(output) != 10 {
+		t.Fatalf("invalid batch size: %d", len(output))
+	}
+}
+
 func BenchmarkBatchSize(b *testing.B) {
 	batch := goBatch.New(
 		goBatch.WithSize(10),
