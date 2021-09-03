@@ -43,7 +43,7 @@ func New(optionFuncs ...OptionFunc) *Batch {
 }
 
 func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
-	buffer := make([]interface{}, 0)
+	buffer := make([]interface{}, 0, b.opts.Size)
 	ticker := time.NewTicker(b.opts.MaxWait)
 
 	for {
@@ -54,7 +54,7 @@ func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
 			if len(buffer) == b.opts.Size {
 				output <- buffer
 
-				buffer = make([]interface{}, 0)
+				buffer = make([]interface{}, 0, b.opts.Size)
 
 				ticker.Reset(b.opts.MaxWait)
 			}
@@ -62,7 +62,9 @@ func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
 			if len(buffer) > 0 {
 				output <- buffer
 
-				buffer = make([]interface{}, 0)
+				buffer = make([]interface{}, 0, b.opts.Size)
+
+				ticker.Reset(b.opts.MaxWait)
 			}
 		case <-b.close:
 			if len(buffer) > 0 {
