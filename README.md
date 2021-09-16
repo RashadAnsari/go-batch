@@ -4,7 +4,7 @@
 
 A simple batching library in Golang.
 
-## Guid
+## Guied
 
 ### Installation
 
