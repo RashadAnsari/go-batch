@@ -18,6 +18,7 @@ go get github.com/RashadAnsari/go-batch
 package main
 
 import (
+	"context"
 	"log"
 	"math/rand"
 	"time"
@@ -26,9 +27,12 @@ import (
 )
 
 func main() {
+	ctx, canl := context.WithCancel(context.Background())
+
 	batch := goBatch.New(
 		goBatch.WithSize(10),
 		goBatch.WithMaxWait(1*time.Second),
+		goBatch.WithContext(ctx),
 	)
 
 	go func() {
@@ -53,6 +57,6 @@ func main() {
 		}
 	}
 
-	batch.Close()
+	canl()
 }
 ```

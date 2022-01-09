@@ -1,14 +1,13 @@
 package batch
 
 import (
+	"context"
 	"time"
 )
 
 // Batch represents the go-batch struct.
 type Batch struct {
-	opts  *Options
-	close chan struct{}
-
+	opts *Options
 	// Input represents the batch input channel.
 	Input chan<- interface{}
 	// Output represents the batch output channel.
@@ -20,6 +19,7 @@ func New(optionFuncs ...OptionFunc) *Batch {
 	opts := &Options{
 		Size:    DefaultBatchSize,
 		MaxWait: DefaultMaxWait,
+		Context: context.Background(),
 	}
 
 	for _, optionFunc := range optionFuncs {
@@ -30,9 +30,7 @@ func New(optionFuncs ...OptionFunc) *Batch {
 	output := make(chan []interface{})
 
 	b := &Batch{
-		opts:  opts,
-		close: make(chan struct{}),
-
+		opts:   opts,
 		Input:  input,
 		Output: output,
 	}
@@ -46,7 +44,12 @@ func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
 	buffer := make([]interface{}, 0, b.opts.Size)
 	ticker := time.NewTicker(b.opts.MaxWait)
 
+Loop:
 	for {
+		if b.opts.Context.Err() != nil {
+			break
+		}
+
 		select {
 		case event := <-input:
 			buffer = append(buffer, event)
@@ -66,17 +69,14 @@ func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
 
 				ticker.Reset(b.opts.MaxWait)
 			}
-		case <-b.close:
-			if len(buffer) > 0 {
-				output <- buffer
-			}
-
-			return
+		case <-b.opts.Context.Done():
+			break Loop
 		}
 	}
-}
 
-// Close drops all the batch events into the output channel and does not listen to the new events again.
-func (b *Batch) Close() {
-	b.close <- struct{}{}
+	if len(buffer) > 0 {
+		output <- buffer
+	}
+
+	close(output)
 }

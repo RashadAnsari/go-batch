@@ -1,6 +1,9 @@
 package batch
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	// DefaultBatchSize represents the default value for the size of each batch.
@@ -22,6 +25,10 @@ type Options struct {
 	//
 	// Default: 1 * time.Second.
 	MaxWait time.Duration
+	// Context represents the context that the Batch instance will use for its life cycle.
+	//
+	// Default: context.Background().
+	Context context.Context
 }
 
 // WithSize sets the maximum number of items that can be in each batch.
@@ -35,5 +42,12 @@ func WithSize(size int) OptionFunc {
 func WithMaxWait(maxWait time.Duration) OptionFunc {
 	return func(opts *Options) {
 		opts.MaxWait = maxWait
+	}
+}
+
+// WithContext sets the context that the Batch instance will use for its life cycle.
+func WithContext(ctx context.Context) OptionFunc {
+	return func(opts *Options) {
+		opts.Context = ctx
 	}
 }

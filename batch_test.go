@@ -1,6 +1,7 @@
 package batch_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -52,16 +53,19 @@ func TestBatchMaxWait(t *testing.T) {
 }
 
 func TestBatchClose(t *testing.T) {
+	ctx, canl := context.WithCancel(context.Background())
+
 	batch := goBatch.New(
 		goBatch.WithSize(100),
 		goBatch.WithMaxWait(100*time.Second),
+		goBatch.WithContext(ctx),
 	)
 
 	for i := 1; i <= 10; i++ {
 		batch.Input <- i
 	}
 
-	batch.Close()
+	canl()
 
 	output := <-batch.Output
 
