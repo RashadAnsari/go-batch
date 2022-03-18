@@ -4,15 +4,16 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"reflect"
 	"time"
 
-	goBatch "github.com/RashadAnsari/go-batch"
+	goBatch "github.com/RashadAnsari/go-batch/v2"
 )
 
 func main() {
 	ctx, canl := context.WithCancel(context.Background())
 
-	batch := goBatch.New(
+	batch := goBatch.New[int](
 		goBatch.WithSize(10),
 		goBatch.WithMaxWait(1*time.Second),
 		goBatch.WithContext(ctx),
@@ -22,7 +23,8 @@ func main() {
 		for {
 			output := <-batch.Output
 
-			log.Printf("output: %v, size: %d\n", output, len(output))
+			log.Printf("output: %v, size: %d\n",
+				output, reflect.ValueOf(output).Len())
 		}
 	}()
 

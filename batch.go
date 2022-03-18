@@ -6,16 +6,16 @@ import (
 )
 
 // Batch represents the go-batch struct.
-type Batch struct {
+type Batch[T any] struct {
 	opts *Options
 	// Input represents the batch input channel.
-	Input chan<- interface{}
+	Input chan<- T
 	// Output represents the batch output channel.
-	Output <-chan []interface{}
+	Output <-chan []T
 }
 
 // New creates a new go-batch instance.
-func New(optionFuncs ...OptionFunc) *Batch {
+func New[T any](optionFuncs ...OptionFunc) *Batch[T] {
 	opts := &Options{
 		Size:    DefaultBatchSize,
 		MaxWait: DefaultMaxWait,
@@ -26,13 +26,19 @@ func New(optionFuncs ...OptionFunc) *Batch {
 		optionFunc(opts)
 	}
 
-	input := make(chan interface{})
-	output := make(chan []interface{})
+	input := make(chan T)
+	output := make(chan []T)
 
-	b := &Batch{
+	oneWayInput := make(chan<- T)
+	oneWayOutput := make(<-chan []T)
+
+	oneWayInput = input
+	oneWayOutput = output
+
+	b := &Batch[T]{
 		opts:   opts,
-		Input:  input,
-		Output: output,
+		Input:  oneWayInput,
+		Output: oneWayOutput,
 	}
 
 	go b.processor(input, output)
@@ -40,8 +46,8 @@ func New(optionFuncs ...OptionFunc) *Batch {
 	return b
 }
 
-func (b *Batch) processor(input chan interface{}, output chan []interface{}) {
-	buffer := make([]interface{}, 0, b.opts.Size)
+func (b *Batch[T]) processor(input chan T, output chan []T) {
+	buffer := make([]T, 0, b.opts.Size)
 	ticker := time.NewTicker(b.opts.MaxWait)
 
 Loop:
@@ -57,7 +63,7 @@ Loop:
 			if len(buffer) == b.opts.Size {
 				output <- buffer
 
-				buffer = make([]interface{}, 0, b.opts.Size)
+				buffer = make([]T, 0, b.opts.Size)
 
 				ticker.Reset(b.opts.MaxWait)
 			}
@@ -65,7 +71,7 @@ Loop:
 			if len(buffer) > 0 {
 				output <- buffer
 
-				buffer = make([]interface{}, 0, b.opts.Size)
+				buffer = make([]T, 0, b.opts.Size)
 
 				ticker.Reset(b.opts.MaxWait)
 			}

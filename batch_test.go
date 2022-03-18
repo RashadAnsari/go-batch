@@ -2,14 +2,15 @@ package batch_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
-	goBatch "github.com/RashadAnsari/go-batch"
+	goBatch "github.com/RashadAnsari/go-batch/v2"
 )
 
 func TestBatchSize(t *testing.T) {
-	batch := goBatch.New(
+	batch := goBatch.New[int](
 		goBatch.WithSize(10),
 		goBatch.WithMaxWait(1*time.Minute),
 	)
@@ -34,7 +35,7 @@ func TestBatchSize(t *testing.T) {
 }
 
 func TestBatchMaxWait(t *testing.T) {
-	batch := goBatch.New(
+	batch := goBatch.New[int](
 		goBatch.WithSize(100),
 		goBatch.WithMaxWait(1*time.Second),
 	)
@@ -47,15 +48,17 @@ func TestBatchMaxWait(t *testing.T) {
 
 	output := <-batch.Output
 
-	if len(output) != 10 {
-		t.Fatalf("invalid batch size: %d", len(output))
+	outputLen := reflect.ValueOf(output).Len()
+
+	if outputLen != 10 {
+		t.Fatalf("invalid batch size: %d", outputLen)
 	}
 }
 
 func TestBatchClose(t *testing.T) {
 	ctx, canl := context.WithCancel(context.Background())
 
-	batch := goBatch.New(
+	batch := goBatch.New[int](
 		goBatch.WithSize(100),
 		goBatch.WithMaxWait(100*time.Second),
 		goBatch.WithContext(ctx),
@@ -69,13 +72,15 @@ func TestBatchClose(t *testing.T) {
 
 	output := <-batch.Output
 
-	if len(output) != 10 {
-		t.Fatalf("invalid batch size: %d", len(output))
+	outputLen := reflect.ValueOf(output).Len()
+
+	if outputLen != 10 {
+		t.Fatalf("invalid batch size: %d", outputLen)
 	}
 }
 
 func BenchmarkBatchSize(b *testing.B) {
-	batch := goBatch.New(
+	batch := goBatch.New[int](
 		goBatch.WithSize(10),
 		goBatch.WithMaxWait(1*time.Second),
 	)
