@@ -8,8 +8,7 @@ format:
 	@find . -type f -name '*.go' -not -path './vendor/*' -exec goimports -w  -local github.com/RashadAnsari {} +
 
 lint:
-	@#golangci-lint -c .golangci.yml run ./...
-	@echo "golangci-lint does not support go1.18 yet!"
+	@golangci-lint -c .golangci.yml run ./...
 
 test:
 	@go test -v -race -p 1 ./...

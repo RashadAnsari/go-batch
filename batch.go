@@ -29,16 +29,10 @@ func New[T any](optionFuncs ...OptionFunc) *Batch[T] {
 	input := make(chan T)
 	output := make(chan []T)
 
-	oneWayInput := make(chan<- T)
-	oneWayOutput := make(<-chan []T)
-
-	oneWayInput = input
-	oneWayOutput = output
-
 	b := &Batch[T]{
 		opts:   opts,
-		Input:  oneWayInput,
-		Output: oneWayOutput,
+		Input:  input,
+		Output: output,
 	}
 
 	go b.processor(input, output)
